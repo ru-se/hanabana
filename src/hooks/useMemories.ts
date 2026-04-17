@@ -1,17 +1,35 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getDeviceId } from '../lib/device'
+import { FLOWERS } from '../lib/flowerGen'
 import { getSupabase } from '../lib/supabase'
 import { weekKey } from '../lib/time'
 import type { Memory, Mood } from '../types'
 
 const LS_KEY = 'hanabin_memories_v1'
 
+function coerceMood(m: unknown): Mood {
+  return typeof m === 'string' && m in FLOWERS ? (m as Mood) : 'moved'
+}
+
+function normalizeMemory(m: Memory): Memory {
+  const created = m.created_at ? String(m.created_at) : new Date().toISOString()
+  return {
+    id: String(m.id),
+    user_id: m.user_id != null ? String(m.user_id) : null,
+    text: String(m.text ?? ''),
+    mood: coerceMood(m.mood),
+    xp: Number.isFinite(Number(m.xp)) ? Number(m.xp) : 50,
+    created_at: created,
+    week_key: weekKey(new Date(created)),
+  }
+}
+
 function safeParseMemories(raw: string | null): Memory[] {
   if (!raw) return []
   try {
     const v = JSON.parse(raw) as unknown
     if (!Array.isArray(v)) return []
-    return v.filter(Boolean) as Memory[]
+    return v.filter(Boolean).map((row) => normalizeMemory(row as Memory))
   } catch {
     return []
   }
@@ -45,15 +63,17 @@ export function useMemories(): {
         return
       }
 
-      const mems = (data || []).map((m) => ({
-        id: String(m.id),
-        user_id: m.user_id ? String(m.user_id) : null,
-        text: String(m.text ?? ''),
-        mood: m.mood as Mood,
-        xp: Number(m.xp ?? 50),
-        created_at: String(m.created_at),
-        week_key: String(m.week_key ?? weekKey(new Date(m.created_at))),
-      })) as Memory[]
+      const mems = (data || []).map((m) =>
+        normalizeMemory({
+          id: String(m.id),
+          user_id: m.user_id ? String(m.user_id) : null,
+          text: String(m.text ?? ''),
+          mood: m.mood as Mood,
+          xp: Number(m.xp ?? 50),
+          created_at: String(m.created_at),
+          week_key: weekKey(new Date(m.created_at)),
+        }),
+      )
 
       setMemories(mems)
       localStorage.setItem(LS_KEY, JSON.stringify(mems))
@@ -65,7 +85,7 @@ export function useMemories(): {
   }, [])
 
   const weeks = useMemo(() => {
-    const w = [...new Set(memories.map((m) => m.week_key))].sort((a, b) => (b > a ? 1 : -1))
+    const w = [...new Set(memories.map((m) => m.week_key))].sort((a, b) => b.localeCompare(a))
     return w.length ? w.slice(0, 8) : [weekKey(new Date())]
   }, [memories])
 

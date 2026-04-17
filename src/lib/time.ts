@@ -1,10 +1,15 @@
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** 週の先頭（月曜始まり）。文字列ソート可能な YYYY-MM-DD 形式。 */
 export function weekKey(d: Date): string {
   const day = new Date(d)
   day.setHours(0, 0, 0, 0)
   const dow = day.getDay()
   const diff = day.getDate() - dow + (dow === 0 ? -6 : 1) // Monday start
   day.setDate(diff)
-  return `${day.getFullYear()}-${day.getMonth() + 1}-${day.getDate()}`
+  return `${day.getFullYear()}-${pad2(day.getMonth() + 1)}-${pad2(day.getDate())}`
 }
 
 export function isSameLocalDay(aISO: string, todayKey: string): boolean {

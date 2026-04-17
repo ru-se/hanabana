@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { isSameLocalDay } from '../lib/time'
 import { FLOWERS } from '../lib/flowerGen'
 import type { GardenFlower } from '../types'
 
@@ -23,8 +24,16 @@ function rand(id: string, salt: string): number {
   return hashToUnit(`${id}:${salt}`)
 }
 
-export function Garden(props: { flowers: GardenFlower[] }) {
+export function Garden(props: { flowers: GardenFlower[]; todayKey: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const flowersRef = useRef(props.flowers)
+  const todayKeyRef = useRef(props.todayKey)
+  useLayoutEffect(() => {
+    flowersRef.current = props.flowers
+  }, [props.flowers])
+  useLayoutEffect(() => {
+    todayKeyRef.current = props.todayKey
+  }, [props.todayKey])
   const dpr = useMemo(() => Math.max(1, Math.min(2, window.devicePixelRatio || 1)), [])
 
   useEffect(() => {
@@ -54,9 +63,29 @@ export function Garden(props: { flowers: GardenFlower[] }) {
       const groundY = H - 82
       const horizonY = Math.max(120, H - 260)
 
-      const ordered = [...props.flowers].sort((a, b) => a.ySeed - b.ySeed)
+      const list = flowersRef.current
+      const tk = todayKeyRef.current
+      const todayList = list.filter((f) => isSameLocalDay(f.createdAtISO, tk))
+      if (todayList.length) {
+        const xs = todayList.map((f) => (f.xp * W) / 100)
+        const pad = W * 0.06
+        const left = Math.max(0, Math.min(...xs) - pad)
+        const right = Math.min(W, Math.max(...xs) + pad)
+        const bandH = 18
+        const top = groundY - 8
+        ctx.save()
+        const g = ctx.createLinearGradient(left, top, right, top)
+        g.addColorStop(0, 'rgba(255,255,255,0)')
+        g.addColorStop(0.5, 'rgba(255,255,255,0.24)')
+        g.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = g
+        ctx.fillRect(left, top - bandH, Math.max(1, right - left), bandH)
+        ctx.restore()
+      }
+
+      const ordered = [...list].sort((a, b) => a.ySeed - b.ySeed)
       for (const f of ordered) {
-        renderFlower(ctx, f, now, W, groundY, horizonY)
+        renderFlower(ctx, f, now, W, groundY, horizonY, tk)
       }
 
       raf = window.requestAnimationFrame(loop)
@@ -67,7 +96,7 @@ export function Garden(props: { flowers: GardenFlower[] }) {
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
     }
-  }, [dpr, props.flowers])
+  }, [dpr])
 
   return <canvas ref={canvasRef} className="c-garden" />
 }
@@ -79,6 +108,7 @@ function renderFlower(
   W: number,
   groundY: number,
   horizonY: number,
+  todayKey: string,
 ) {
   const def = FLOWERS[f.mood] ?? FLOWERS.moved
 
@@ -117,7 +147,7 @@ function renderFlower(
   ctx.translate(0, -stemH)
 
   // today highlight glow (pulse 3s)
-  if (f.isToday) {
+  if (isSameLocalDay(f.createdAtISO, todayKey)) {
     const t = (nowMs % 3000) / 3000
     const pulse = 0.45 + 0.55 * (0.5 - 0.5 * Math.cos(Math.PI * 2 * t))
     const glowR = r * (1.15 + 0.35 * pulse)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isSameLocalDay } from '../lib/time'
 import type { GardenFlower, Memory } from '../types'
 
@@ -11,13 +11,15 @@ function hashToUnit(v: string): number {
   return (h >>> 0) / 2 ** 32
 }
 
-export function useGarden(memories: Memory[]): {
+export function useGarden(
+  memories: Memory[],
+  todayKey: string,
+): {
   flowers: GardenFlower[]
   isFlashOn: boolean
   flash: () => void
   bloomFromMemory: (m: Memory) => void
 } {
-  const todayKey = useMemo(() => new Date().toDateString(), [])
   const [isFlashOn, setIsFlashOn] = useState(false)
   const [flowers, setFlowers] = useState<GardenFlower[]>([])
   const knownIds = useRef(new Set<string>())
@@ -26,7 +28,8 @@ export function useGarden(memories: Memory[]): {
   const flash = useCallback(() => {
     setIsFlashOn(true)
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
-    flashTimer.current = window.setTimeout(() => setIsFlashOn(false), 140)
+    // CSS の opacity 遷移(60ms)と揃え、審査デモで一瞬が見えるようにする
+    flashTimer.current = window.setTimeout(() => setIsFlashOn(false), 70)
   }, [])
 
   const bloomFromMemory = useCallback(

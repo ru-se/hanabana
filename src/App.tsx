@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Garden } from './components/Garden'
 import { ParticleCanvas, type ParticleCanvasHandle } from './components/ParticleCanvas'
 import { RecapPanel } from './components/RecapPanel'
@@ -8,6 +8,9 @@ import { WriteZone } from './components/WriteZone'
 import { useBloom } from './hooks/useBloom'
 import { useGarden } from './hooks/useGarden'
 import { useMemories } from './hooks/useMemories'
+import { useTodayKey } from './hooks/useTodayKey'
+import { moodSubline } from './lib/flowerGen'
+import type { Mood } from './types'
 
 export default function App() {
   const toastRef = useRef<ToastHandle>(null)
@@ -15,9 +18,17 @@ export default function App() {
   const particleRef = useRef<ParticleCanvasHandle>(null)
 
   const { memories, addMemory, weeks } = useMemories()
-  const garden = useGarden(memories)
+  const todayKey = useTodayKey()
+  const garden = useGarden(memories, todayKey)
   const [recapOpen, setRecapOpen] = useState(false)
-  const todayKey = useMemo(() => new Date().toDateString(), [])
+  const [feedbackLine, setFeedbackLine] = useState<string | null>(null)
+  const closeRecap = useCallback(() => setRecapOpen(false), [])
+
+  useEffect(() => {
+    if (!feedbackLine) return
+    const t = window.setTimeout(() => setFeedbackLine(null), 4500)
+    return () => window.clearTimeout(t)
+  }, [feedbackLine])
 
   const bloom = useBloom({
     addMemory,
@@ -26,11 +37,12 @@ export default function App() {
     onParticles: (x, y, mood) => particleRef.current?.spawn(x, y, mood),
     onBloom: (m) => garden.bloomFromMemory(m),
     onToast: (msg) => toastRef.current?.show(msg),
+    onFeedbackLine: (mood: Mood) => setFeedbackLine(moodSubline(mood)),
   })
 
   return (
     <>
-      <Garden flowers={garden.flowers} />
+      <Garden flowers={garden.flowers} todayKey={todayKey} />
       <RippleCanvas ref={rippleRef} />
       <ParticleCanvas ref={particleRef} />
       <div className="ground" />
@@ -40,7 +52,12 @@ export default function App() {
         <div className="logo">はなびん</div>
       </div>
 
-      <WriteZone disabled={bloom.isBusy} onSubmit={bloom.submit} />
+      <WriteZone
+        disabled={bloom.isBusy}
+        busy={bloom.isBusy}
+        feedbackLine={feedbackLine}
+        onSubmit={bloom.submit}
+      />
 
       <div className="counter">
         🌸 <span>{memories.length}</span>
@@ -54,7 +71,7 @@ export default function App() {
       {recapOpen && (
         <RecapPanel
           open={recapOpen}
-          onClose={() => setRecapOpen(false)}
+          onClose={closeRecap}
           weeks={weeks}
           memories={memories}
           todayKey={todayKey}

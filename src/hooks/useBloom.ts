@@ -1,66 +1,82 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { detectMood } from '../lib/moodDetect'
 import { flowerToastText } from '../lib/flowerGen'
 import type { Memory, Mood } from '../types'
 
-export function useBloom(args: {
+export type UseBloomArgs = {
   addMemory: (args: { text: string; mood: Mood; xp: number; createdAtISO?: string }) => Promise<Memory>
+  onWaterDrop?: () => void
   onFlash: () => void
   onRipple: (x: number, y: number) => void
   onParticles: (x: number, y: number, mood: Mood) => void
   onBloom: (m: Memory) => void
   onToast: (msg: string) => void
-}): { isBusy: boolean; submit: (text: string) => Promise<void> } {
+  onFeedbackLine?: (mood: Mood) => void
+}
+
+export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: string) => Promise<void> } {
   const [isBusy, setIsBusy] = useState(false)
   const activeId = useRef(0)
+  const argsRef = useRef(args)
+  useLayoutEffect(() => {
+    argsRef.current = args
+  })
+  const timersRef = useRef<number[]>([])
 
-  const submit = useCallback(
-    async (text: string) => {
-      const t = text.trim()
-      if (t.length < 2) return
+  const clearTimers = () => {
+    timersRef.current.forEach((t) => window.clearTimeout(t))
+    timersRef.current = []
+  }
 
-      const myId = ++activeId.current
-      setIsBusy(true)
+  const submit = useCallback(async (text: string) => {
+    const t = text.trim()
+    if (t.length < 2) return
 
-      const cx = window.innerWidth / 2
-      const cy = window.innerHeight / 2 + 10
+    const myId = ++activeId.current
+    clearTimers()
+    setIsBusy(true)
 
-      let mood: Mood = 'moved'
-      try {
-        const res = await detectMood(t)
-        mood = res.mood
-      } catch {
-        mood = 'moved'
-      }
+    const cx = window.innerWidth / 2
+    const cy = window.innerHeight / 2 + 10
 
+    argsRef.current.onWaterDrop?.()
+
+    let mood: Mood = 'moved'
+    try {
+      const res = await detectMood(t)
+      mood = res.mood
+    } catch {
+      mood = 'moved'
+    }
+
+    if (activeId.current !== myId) return
+
+    argsRef.current.onFeedbackLine?.(mood)
+    argsRef.current.onFlash()
+    argsRef.current.onRipple(cx, cy)
+
+    const particlesT = window.setTimeout(() => {
       if (activeId.current !== myId) return
+      argsRef.current.onParticles(cx, cy, mood)
+    }, 550)
+    timersRef.current.push(particlesT)
 
-      args.onFlash()
-      args.onRipple(cx, cy)
-
-      const particlesT = window.setTimeout(() => {
+    const bloomT = window.setTimeout(() => {
+      void (async () => {
         if (activeId.current !== myId) return
-        args.onParticles(cx, cy, mood)
-      }, 550)
-
-      const bloomT = window.setTimeout(async () => {
-        if (activeId.current !== myId) return
-
-        const xp = 4 + Math.random() * 92
-        const mem = await args.addMemory({ text: t, mood, xp })
-        if (activeId.current !== myId) return
-
-        args.onBloom(mem)
-        args.onToast(flowerToastText(mood))
-        setIsBusy(false)
-      }, 800)
-
-      // if something triggers a new submit, timers from this run should no-op
-      void particlesT
-      void bloomT
-    },
-    [args],
-  )
+        try {
+          const xp = 4 + Math.random() * 92
+          const mem = await argsRef.current.addMemory({ text: t, mood, xp })
+          if (activeId.current !== myId) return
+          argsRef.current.onBloom(mem)
+          argsRef.current.onToast(flowerToastText(mood))
+        } finally {
+          if (activeId.current === myId) setIsBusy(false)
+        }
+      })()
+    }, 800)
+    timersRef.current.push(bloomT)
+  }, [])
 
   return { isBusy, submit }
 }

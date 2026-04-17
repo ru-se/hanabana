@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { WaterDrop } from './WaterDrop'
 
-export function WriteZone(props: { disabled?: boolean; onSubmit: (text: string) => Promise<void> }) {
+export function WriteZone(props: {
+  disabled?: boolean
+  busy?: boolean
+  feedbackLine?: string | null
+  onSubmit: (text: string) => Promise<void>
+}) {
   const [text, setText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const busy = props.busy ?? false
   const canSend = useMemo(() => text.trim().length >= 2 && !props.disabled, [props.disabled, text])
   const hasAny = useMemo(() => text.trim().length >= 1, [text])
 
@@ -42,6 +48,14 @@ export function WriteZone(props: { disabled?: boolean; onSubmit: (text: string) 
       />
       <div className="underline" />
       <div className={`hint ${canSend ? 'hintOn' : ''}`}>⌘ Enter でも送れます</div>
+      <div className={`analyzeLine ${busy ? 'analyzeLineOn' : ''}`} aria-live="polite">
+        気持ちを読み取り中…
+      </div>
+      {props.feedbackLine ? (
+        <div className="writeFeedback" aria-live="polite">
+          {props.feedbackLine}
+        </div>
+      ) : null}
       <button
         className={`sendBtnWrap ${canSend ? 'sendBtnShow' : ''}`}
         onClick={() => void submit()}
@@ -49,7 +63,7 @@ export function WriteZone(props: { disabled?: boolean; onSubmit: (text: string) 
         disabled={!canSend}
         aria-label="花を咲かせる"
       >
-        <WaterDrop className="dropBody" />
+        <WaterDrop className={`dropBody ${busy ? 'dropSending' : ''}`} />
       </button>
     </div>
   )

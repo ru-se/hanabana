@@ -231,6 +231,47 @@ textarea {
   opacity: 1;
 }
 
+.analyzeLine {
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(107, 168, 212, 0.75);
+  letter-spacing: 0.12em;
+  text-align: center;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition:
+    opacity 0.35s,
+    max-height 0.35s;
+  user-select: none;
+}
+.analyzeLineOn {
+  opacity: 1;
+  max-height: 24px;
+}
+
+.writeFeedback {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 300;
+  color: rgba(44, 62, 53, 0.72);
+  letter-spacing: 0.06em;
+  text-align: center;
+  line-height: 1.65;
+  max-width: 420px;
+  animation: feedbackFade 0.5s ease-out;
+}
+@keyframes feedbackFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .sendBtnWrap {
   margin-top: 22px;
   width: 60px;
@@ -259,6 +300,20 @@ textarea {
 }
 .dropBody {
   transition: transform 0.18s;
+}
+.dropSending {
+  animation: dropPulse 0.95s ease-in-out infinite;
+}
+@keyframes dropPulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-3px) scale(1.06);
+    opacity: 0.92;
+  }
 }
 
 /* recap panel */

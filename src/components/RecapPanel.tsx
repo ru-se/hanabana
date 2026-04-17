@@ -37,6 +37,7 @@ export function RecapPanel(props: {
   memories: Memory[]
   todayKey: string
 }) {
+  const { onClose } = props
   const [selWeek, setSelWeek] = useState<string>(() => props.weeks[0] ?? '')
   const [words, setWords] = useState<WordFloat[]>([])
   const [countUp, setCountUp] = useState<number>(0)
@@ -55,6 +56,14 @@ export function RecapPanel(props: {
     if (!wk) return []
     return props.memories.filter((m) => m.week_key === wk).sort((a, b) => (a.created_at > b.created_at ? 1 : -1))
   }, [props.memories, wk])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   useEffect(() => {
     const canvas = canvasRef.current
