@@ -1,0 +1,442 @@
+@import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400&family=Shippori+Mincho:wght@400;500&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+}
+
+body {
+  background: linear-gradient(180deg, #dceeff 0%, #eef6ff 50%, #d4edda 100%);
+  color: #2c3e35;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+:root {
+  --ui-border: rgba(107, 168, 212, 0.22);
+  --ui-text-soft: rgba(107, 168, 212, 0.6);
+  --ui-text-softer: rgba(107, 168, 212, 0.55);
+  --ui-green: #7cbf8a;
+  --ui-ink: #2c3e35;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+/* layers */
+.c-garden,
+.c-ripple,
+.c-particle {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.c-garden {
+  z-index: 1;
+}
+.c-ripple {
+  z-index: 6;
+}
+.c-particle {
+  z-index: 7;
+}
+
+.ground {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(to top, #b8dfc2, #d4edda);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.header {
+  position: fixed;
+  top: 28px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.logo {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--ui-ink);
+  letter-spacing: 0.25em;
+  opacity: 0.75;
+}
+
+.counter {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 20;
+  font-size: 11px;
+  color: #7a9b8a;
+  letter-spacing: 0.12em;
+  user-select: none;
+}
+
+.recapBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 20;
+  border: 1px solid rgba(107, 168, 212, 0.35);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: #7a9b8a;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: all 0.2s;
+}
+.recapBtn:hover {
+  background: rgba(255, 255, 255, 0.92);
+  color: #3d7ab5;
+}
+
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 55%,
+    rgba(107, 168, 212, 0.22) 0%,
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.06s;
+}
+.flashOn {
+  opacity: 1;
+}
+
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-60px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--ui-border);
+  border-radius: 24px;
+  padding: 9px 22px;
+  font-size: 13px;
+  color: var(--ui-ink);
+  letter-spacing: 0.08em;
+  z-index: 50;
+  transition: transform 0.48s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+.toastShow {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* write zone */
+.writeZone {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 480px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0 auto;
+}
+
+.placeholderText {
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--ui-text-softer);
+  letter-spacing: 0.1em;
+  text-align: center;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.25s;
+  user-select: none;
+}
+
+.memo {
+  width: 100%;
+  min-height: 80px;
+  max-height: 200px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--ui-ink);
+  line-height: 1.9;
+  resize: none;
+  text-align: center;
+  caret-color: rgba(107, 168, 212, 0.8);
+  overflow-y: auto;
+}
+
+.underline {
+  width: 60px;
+  height: 1.5px;
+  background: rgba(107, 168, 212, 0.4);
+  margin: 10px auto 0;
+  transition:
+    width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.3s;
+}
+.writeZone:focus-within .underline {
+  width: 180px;
+  background: rgba(107, 168, 212, 0.7);
+}
+
+.hint {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--ui-text-soft);
+  letter-spacing: 0.12em;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s;
+  user-select: none;
+}
+.hintOn {
+  opacity: 1;
+}
+
+.sendBtnWrap {
+  margin-top: 22px;
+  width: 60px;
+  height: 60px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.35s,
+    transform 0.35s;
+  pointer-events: none;
+}
+.sendBtnShow {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.sendBtnWrap:hover .dropBody {
+  transform: scale(1.1) translateY(-2px);
+}
+.sendBtnWrap:active .dropBody {
+  transform: scale(0.94);
+}
+.dropBody {
+  transition: transform 0.18s;
+}
+
+/* recap panel */
+.recapOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(220, 238, 255, 0);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.35s,
+    background 0.35s;
+}
+.recapOpen {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(220, 238, 255, 0.6);
+  backdrop-filter: blur(3px);
+}
+.recapPanel {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid rgba(107, 168, 212, 0.18);
+  padding: 26px 22px 44px;
+  max-height: 82vh;
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.recapOpen .recapPanel {
+  transform: translateY(0);
+}
+
+.rh {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--ui-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.rsub {
+  font-size: 11px;
+  color: #7a9b8a;
+  letter-spacing: 0.1em;
+  margin-bottom: 18px;
+}
+.rcls {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #7a9b8a;
+  cursor: pointer;
+}
+
+.wtabs {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.wtab {
+  border: 1px solid rgba(107, 168, 212, 0.28);
+  background: transparent;
+  border-radius: 16px;
+  padding: 5px 13px;
+  font-size: 11px;
+  color: #7a9b8a;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.18s;
+}
+.wtabOn {
+  background: white;
+  border-color: #6ba8d4;
+  color: #3d7ab5;
+}
+
+.miniGarden {
+  width: 100%;
+  height: 160px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #dceeff 0%, #d4edda 100%);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.miniCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.wordsLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fw {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 300;
+  color: rgba(44, 62, 53, 0.65);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  animation: fwUp 3.2s ease-out forwards;
+}
+@keyframes fwUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  15% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-55px);
+  }
+}
+
+.mlist {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.mi {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: rgba(238, 246, 255, 0.55);
+  opacity: 0;
+  transform: translateY(5px);
+  animation: miFade 0.38s forwards;
+}
+@keyframes miFade {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.miEm {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+.miTx {
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--ui-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.miDt {
+  font-size: 10px;
+  color: #7a9b8a;
+  margin-top: 3px;
+  letter-spacing: 0.04em;
+}
+.emptyWeek {
+  font-size: 12px;
+  color: #7a9b8a;
+  text-align: center;
+  padding: 18px 0;
+  font-weight: 300;
+}

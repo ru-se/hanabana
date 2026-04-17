@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>はなびん</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400&family=Shippori+Mincho:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Zen Kaku Gothic New',sans-serif}
+
+body{
+  background:linear-gradient(180deg,#dceeff 0%,#eef6ff 50%,#d4edda 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+
+/* CANVAS layers */
+#c-garden,#c-ripple,#c-particle{position:fixed;inset:0;pointer-events:none}
+#c-garden{z-index:1}
+#c-ripple{z-index:6}
+#c-particle{z-index:7}
+
+/* GROUND */
+#ground{
+  position:fixed;bottom:0;left:0;right:0;height:90px;
+  background:linear-gradient(to top,#b8dfc2,#d4edda);
+  z-index:2;pointer-events:none;
+}
+
+/* HEADER */
+#header{
+  position:fixed;top:28px;left:0;right:0;
+  display:flex;align-items:center;justify-content:center;
+  z-index:20;
+}
+#logo{
+  font-family:'Shippori Mincho',serif;
+  font-size:20px;font-weight:400;
+  color:#2c3e35;letter-spacing:.25em;opacity:.75;
+}
+
+/* COUNTER */
+#counter{
+  position:fixed;bottom:24px;left:24px;z-index:20;
+  font-size:11px;color:#7a9b8a;letter-spacing:.12em;
+}
+
+/* RECAP BTN */
+#recap-btn{
+  position:fixed;bottom:20px;right:20px;z-index:20;
+  border:1px solid rgba(107,168,212,.35);
+  background:rgba(255,255,255,.7);backdrop-filter:blur(10px);
+  border-radius:20px;padding:8px 16px;
+  font-size:11px;color:#7a9b8a;cursor:pointer;
+  letter-spacing:.1em;font-family:'Zen Kaku Gothic New',sans-serif;
+  transition:all .2s;
+}
+#recap-btn:hover{background:white;color:#3d7ab5}
+
+/* ── WRITE ZONE ── */
+#write-zone{
+  position:relative;z-index:10;
+  width:100%;max-width:480px;
+  padding:0 24px;
+  display:flex;flex-direction:column;align-items:center;
+}
+
+#placeholder-text{
+  font-size:15px;font-weight:300;
+  color:rgba(107,168,212,.55);
+  letter-spacing:.1em;text-align:center;
+  pointer-events:none;
+  position:absolute;
+  transition:opacity .25s;
+  user-select:none;
+}
+
+#memo{
+  width:100%;min-height:80px;max-height:200px;
+  background:transparent;border:none;outline:none;
+  font-family:'Zen Kaku Gothic New',sans-serif;
+  font-size:20px;font-weight:300;
+  color:#2c3e35;line-height:1.9;
+  resize:none;text-align:center;
+  caret-color:rgba(107,168,212,.8);
+  overflow-y:auto;
+}
+
+/* underline that breathes */
+#underline{
+  width:60px;height:1.5px;
+  background:rgba(107,168,212,.4);
+  margin:10px auto 0;
+  transition:width .4s cubic-bezier(.34,1.56,.64,1),background .3s;
+}
+#write-zone:focus-within #underline{
+  width:180px;background:rgba(107,168,212,.7);
+}
+
+/* hint */
+#hint{
+  margin-top:12px;font-size:11px;color:rgba(107,168,212,.6);
+  letter-spacing:.12em;text-align:center;
+  opacity:0;transition:opacity .4s;
+}
+
+/* SEND BTN — water drop */
+#send-btn{
+  margin-top:22px;
+  width:60px;height:60px;
+  border:none;background:none;cursor:pointer;
+  opacity:0;transform:translateY(6px);
+  transition:opacity .35s,transform .35s;
+  pointer-events:none;
+}
+#send-btn.show{opacity:1;transform:translateY(0);pointer-events:auto}
+#send-btn:hover #drop-body{transform:scale(1.1) translateY(-2px)}
+#send-btn:active #drop-body{transform:scale(.94)}
+#drop-body{transition:transform .18s}
+
+/* TOAST */
+#toast{
+  position:fixed;top:24px;left:50%;
+  transform:translateX(-50%) translateY(-60px);
+  background:rgba(255,255,255,.95);backdrop-filter:blur(12px);
+  border:1px solid rgba(107,168,212,.22);
+  border-radius:24px;padding:9px 22px;
+  font-size:13px;color:#2c3e35;letter-spacing:.08em;
+  z-index:50;
+  transition:transform .48s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap;pointer-events:none;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* flash */
+#flash{
+  position:fixed;inset:0;z-index:5;pointer-events:none;
+  background:radial-gradient(circle at 50% 55%,rgba(107,168,212,.22) 0%,transparent 65%);
+  opacity:0;transition:opacity .06s;
+}
+#flash.on{opacity:1}
+
+/* ── RECAP PANEL ── */
+#recap-overlay{
+  position:fixed;inset:0;z-index:40;
+  background:rgba(220,238,255,0);
+  display:flex;align-items:flex-end;justify-content:center;
+  pointer-events:none;opacity:0;
+  transition:opacity .35s,background .35s;
+}
+#recap-overlay.open{
+  opacity:1;pointer-events:auto;
+  background:rgba(220,238,255,.6);backdrop-filter:blur(3px);
+}
+#recap-panel{
+  width:100%;max-width:600px;
+  background:rgba(255,255,255,.97);
+  border-radius:22px 22px 0 0;
+  border-top:1px solid rgba(107,168,212,.18);
+  padding:26px 22px 44px;
+  max-height:82vh;overflow-y:auto;
+  transform:translateY(100%);
+  transition:transform .42s cubic-bezier(.22,1,.36,1);
+}
+#recap-overlay.open #recap-panel{transform:translateY(0)}
+
+.rh{
+  font-family:'Shippori Mincho',serif;font-size:16px;font-weight:400;
+  letter-spacing:.12em;color:#2c3e35;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:6px;
+}
+.rsub{font-size:11px;color:#7a9b8a;letter-spacing:.1em;margin-bottom:18px}
+.rcls{background:none;border:none;font-size:20px;color:#7a9b8a;cursor:pointer}
+
+/* week tabs */
+.wtabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.wtab{
+  border:1px solid rgba(107,168,212,.28);background:transparent;
+  border-radius:16px;padding:5px 13px;font-size:11px;color:#7a9b8a;
+  cursor:pointer;letter-spacing:.06em;font-family:'Zen Kaku Gothic New',sans-serif;
+  transition:all .18s;
+}
+.wtab.on{background:white;border-color:#6ba8d4;color:#3d7ab5}
+
+/* mini garden */
+#mini-garden{
+  width:100%;height:160px;border-radius:14px;
+  background:linear-gradient(180deg,#dceeff 0%,#d4edda 100%);
+  position:relative;overflow:hidden;margin-bottom:18px;
+}
+#mini-canvas{display:block;width:100%;height:100%}
+#words-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.fw{
+  position:absolute;font-size:11px;font-weight:300;
+  color:rgba(44,62,53,.65);letter-spacing:.04em;
+  white-space:nowrap;
+  animation:fwUp 3.2s ease-out forwards;
+}
+@keyframes fwUp{
+  0%{opacity:0;transform:translateY(0)}
+  15%{opacity:1}
+  75%{opacity:.75}
+  100%{opacity:0;transform:translateY(-55px)}
+}
+
+/* memory list */
+#mlist{display:flex;flex-direction:column;gap:9px}
+.mi{
+  display:flex;gap:11px;align-items:flex-start;
+  padding:11px 13px;border-radius:11px;
+  background:rgba(238,246,255,.55);
+  opacity:0;transform:translateY(5px);
+  animation:miFade .38s forwards;
+}
+@keyframes miFade{to{opacity:1;transform:translateY(0)}}
+.mi-em{font-size:20px;flex-shrink:0;line-height:1.2}
+.mi-tx{font-size:13px;font-weight:300;line-height:1.7;color:#2c3e35}
+.mi-dt{font-size:10px;color:#7a9b8a;margin-top:3px;letter-spacing:.04em}
+</style>
+</head>
+<body>
+
+<canvas id="c-garden"></canvas>
+<canvas id="c-ripple"></canvas>
+<canvas id="c-particle"></canvas>
+<div id="ground"></div>
+<div id="flash"></div>
+
+<div id="header"><div id="logo">はなびん</div></div>
+
+<div id="write-zone">
+  <div id="placeholder-text">今日の、ちいさな幸せ。</div>
+  <textarea id="memo" rows="3" spellcheck="false"></textarea>
+  <div id="underline"></div>
+  <div id="hint">⌘ Enter でも送れます</div>
+  <button id="send-btn" title="花を咲かせる">
+    <svg id="drop-body" width="60" height="60" viewBox="0 0 60 60" fill="none">
+      <circle cx="30" cy="30" r="29" stroke="rgba(107,168,212,.25)" stroke-width="1"/>
+      <circle cx="30" cy="30" r="21" fill="rgba(107,168,212,.07)"/>
+      <path d="M30 15C30 15 21 25.5 21 33C21 37.97 25.03 42 30 42C34.97 42 39 37.97 39 33C39 25.5 30 15 30 15Z" fill="rgba(107,168,212,.8)"/>
+      <ellipse cx="26.5" cy="29.5" rx="2.8" ry="4.2" fill="rgba(255,255,255,.38)" transform="rotate(-18 26.5 29.5)"/>
+    </svg>
+  </button>
+</div>
+
+<div id="counter">🌸 <span id="cnt">0</span></div>
+<button id="recap-btn" onclick="openRecap()">振り返る ✦</button>
+<div id="toast"></div>
+
+<!-- RECAP -->
+<div id="recap-overlay" onclick="outsideClose(event)">
+  <div id="recap-panel">
+    <div class="rh"><span id="r-title">今週の花畑</span><button class="rcls" onclick="closeRecap()">×</button></div>
+    <div class="rsub" id="r-sub"></div>
+    <div class="wtabs" id="r-tabs"></div>
+    <div id="mini-garden"><canvas id="mini-canvas"></canvas><div id="words-layer"></div></div>
+    <div id="mlist"></div>
+  </div>
+</div>
+
+<script>
+// ─── CONSTANTS ────────────────────────────────────────────────────────────
+const SK = 'hanabana_v3';
+
+// Keyword → flower map (simple heuristic, no AI needed in prototype)
+const KW = [
+  { words:['うれし','たのし','やった','最高','好き','ありがと','褒め','ほめ','笑','わら'], mood:'happy' },
+  { words:['しあわせ','幸せ','幸福','嬉し','好き','愛','すき'], mood:'love' },
+  { words:['きれい','綺麗','美し','夕焼け','空','花','虹','星','月'], mood:'moved' },
+  { words:['平和','穏','落ち着','ゆっくり','のんびり','静か','おいし','美味'], mood:'calm' },
+  { words:['疲れ','つかれ','しんど','大変','でも','けど'], mood:'tired' },
+];
+
+const FLOWERS = {
+  happy: { name:'ひまわり', emoji:'🌻', h:45,  s:88, l:64, petals:8 },
+  love:  { name:'桜',       emoji:'🌸', h:340, s:65, l:80, petals:5 },
+  moved: { name:'ネモフィラ',emoji:'💙', h:208, s:72, l:70, petals:5 },
+  calm:  { name:'ラベンダー',emoji:'💜', h:268, s:52, l:72, petals:0 },
+  tired: { name:'スズラン', emoji:'🌿', h:135, s:42, l:66, petals:0 },
+};
+
+function detectMood(text) {
+  const scores = {};
+  KW.forEach(({ words, mood }) => {
+    words.forEach(w => { if (text.includes(w)) scores[mood] = (scores[mood] || 0) + 1; });
+  });
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  if (best) return best[0];
+  // fallback: random weighted toward moved/love
+  return ['moved','love','happy','calm','tired'][Math.floor(Math.random()*3)];
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────
+let memories = [];
+try { memories = JSON.parse(localStorage.getItem(SK) || '[]'); } catch(e) {}
+// sanitise old records
+memories = memories.filter(m => m && typeof m === 'object');
+memories.forEach(m => { if (!m.mood || !FLOWERS[m.mood]) m.mood = 'moved'; });
+
+let gardenFlowers = [];
+const cntEl = document.getElementById('cnt');
+cntEl.textContent = memories.length;
+
+// ─── CANVAS SETUP ─────────────────────────────────────────────────────────
+const gc = document.getElementById('c-garden');
+const gx = gc.getContext('2d');
+const rc = document.getElementById('c-ripple');
+const rx = rc.getContext('2d');
+const pc = document.getElementById('c-particle');
+const px2 = pc.getContext('2d');
+
+function resize() {
+  [gc,rc,pc].forEach(c => { c.width = innerWidth; c.height = innerHeight; });
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── GARDEN DRAW LOOP ─────────────────────────────────────────────────────
+function drawLoop() {
+  gx.clearRect(0, 0, gc.width, gc.height);
+  const now = performance.now();
+  gardenFlowers.forEach(f => renderFlower(gx, f, gc.width, gc.height, now));
+  requestAnimationFrame(drawLoop);
+}
+
+function renderFlower(ctx, f, W, H, now) {
+  const fd = FLOWERS[f.mood] || FLOWERS.moved;
+  const elapsed = now - f.born;
+  const p = Math.min(elapsed / 1100, 1);
+  const ease = p < .5 ? 2*p*p : -1+(4-2*p)*p;
+  const sc = ease * f.scale;
+  if (sc < .01) return;
+
+  const sway = Math.sin(now/1000*f.ss + f.so) * 2.2;
+  const x = f.xp * W / 100;
+  const baseY = H - 82;
+  const stemH = f.stemH * sc;
+
+  ctx.save();
+  ctx.translate(x, baseY);
+  ctx.rotate(sway * Math.PI / 180);
+
+  // stem
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-stemH);
+  ctx.strokeStyle='#7cbf8a'; ctx.lineWidth=1.6*sc; ctx.stroke();
+
+  ctx.translate(0,-stemH);
+
+  if (fd.petals === 0) {
+    // lavender spikes or bell shapes
+    if (f.mood === 'calm') {
+      for (let i=-3;i<=3;i++) {
+        ctx.beginPath();
+        ctx.ellipse(i*3*sc,-(6+Math.abs(i))*sc, 2.8*sc, 8*sc,0,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${fd.h},${fd.s}%,${fd.l}%)`;
+        ctx.globalAlpha=.85; ctx.fill(); ctx.globalAlpha=1;
+      }
+    } else {
+      // suzuran
+      for(let i=-1;i<=1;i++){
+        ctx.beginPath(); ctx.arc(i*7*sc,-5*sc,5.5*sc,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${fd.h},${fd.s}%,${fd.l+10}%)`; ctx.globalAlpha=.8; ctx.fill(); ctx.globalAlpha=1;
+      }
+    }
+  } else {
+    const r = f.r * sc;
+    for (let i=0;i<fd.petals;i++){
+      const a=(i/fd.petals)*Math.PI*2;
+      const ppx=Math.cos(a)*r*.56, ppy=Math.sin(a)*r*.56;
+      ctx.save(); ctx.translate(ppx,ppy); ctx.rotate(a+Math.PI/2);
+      ctx.beginPath(); ctx.ellipse(0,0,r*.42,r*.28,0,0,Math.PI*2);
+      ctx.fillStyle=`hsl(${fd.h+(Math.random()-.5)*12},${fd.s}%,${fd.l}%)`;
+      ctx.globalAlpha=.87; ctx.fill(); ctx.globalAlpha=1; ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(0,0,r*.21,0,Math.PI*2);
+    ctx.fillStyle='#fff8e1'; ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── RIPPLE ───────────────────────────────────────────────────────────────
+let ripples=[], ripRaf=null;
+function triggerRipple(cx,cy){
+  [[.55,7,.6*Math.hypot(innerWidth,innerHeight)],[.35,4,150,12],[.22,2.5,80,22]].forEach(([a,sp,max,delay=0])=>{
+    ripples.push({x:cx,y:cy,r:5,max,a,sp,delay});
+  });
+  if(!ripRaf) animRipple();
+}
+function animRipple(){
+  rx.clearRect(0,0,rc.width,rc.height);
+  ripples=ripples.filter(r=>{
+    if(r.delay>0){r.delay--;return true}
+    r.r+=r.sp; r.a*=.91;
+    if(r.a<.004||r.r>r.max) return false;
+    rx.beginPath(); rx.arc(r.x,r.y,r.r,0,Math.PI*2);
+    rx.strokeStyle=`rgba(107,168,212,${r.a})`; rx.lineWidth=1.4; rx.stroke();
+    return true;
+  });
+  ripRaf=ripples.length?requestAnimationFrame(animRipple):null;
+  if(!ripRaf) rx.clearRect(0,0,rc.width,rc.height);
+}
+
+// ─── PARTICLES ────────────────────────────────────────────────────────────
+let parts=[], partRaf=null;
+function spawnParticles(cx,cy,mood){
+  const fd=FLOWERS[mood]||FLOWERS.moved;
+  for(let i=0;i<20;i++){
+    const a=Math.random()*Math.PI*2, sp=1.8+Math.random()*3.8;
+    parts.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2.2,r:3+Math.random()*5,a:.88,c:`hsl(${fd.h+(Math.random()-.5)*18},${fd.s}%,${fd.l}%)`});
+  }
+  if(!partRaf) animPart();
+}
+function animPart(){
+  px2.clearRect(0,0,pc.width,pc.height);
+  parts=parts.filter(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=.13; p.a*=.92;
+    if(p.a<.01) return false;
+    px2.beginPath(); px2.arc(p.x,p.y,p.r,0,Math.PI*2);
+    px2.fillStyle=p.c; px2.globalAlpha=p.a; px2.fill(); px2.globalAlpha=1;
+    return true;
+  });
+  partRaf=parts.length?requestAnimationFrame(animPart):null;
+  if(!partRaf) px2.clearRect(0,0,pc.width,pc.height);
+}
+
+// ─── BLOOM ────────────────────────────────────────────────────────────────
+const memo=document.getElementById('memo');
+const sendBtn=document.getElementById('send-btn');
+const phText=document.getElementById('placeholder-text');
+const hint=document.getElementById('hint');
+
+memo.addEventListener('input',()=>{
+  const has=memo.value.trim().length>=1;
+  phText.style.opacity=has?'0':'1';
+  const ready=memo.value.trim().length>=2;
+  sendBtn.classList.toggle('show',ready);
+  hint.style.opacity=ready?'1':'0';
+});
+
+sendBtn.addEventListener('click',bloom);
+document.addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') bloom(); });
+
+function bloom(){
+  const text=memo.value.trim();
+  if(text.length<2) return;
+
+  const mood=detectMood(text);
+  const fd=FLOWERS[mood];
+  const cx=innerWidth/2, cy=innerHeight/2+10;
+
+  // flash
+  const fl=document.getElementById('flash');
+  fl.classList.add('on'); setTimeout(()=>fl.classList.remove('on'),140);
+
+  triggerRipple(cx,cy);
+  setTimeout(()=>spawnParticles(cx,cy,mood),180);
+
+  setTimeout(()=>{
+    const xp=4+Math.random()*92;
+    const f={
+      mood, xp,
+      scale:.52+Math.random()*.68,
+      r:13+Math.random()*10,
+      stemH:48+Math.random()*52,
+      ss:.55+Math.random()*.85,
+      so:Math.random()*Math.PI*2,
+      born:performance.now()
+    };
+    gardenFlowers.push(f);
+    if(gardenFlowers.length>100) gardenFlowers.shift();
+
+    const now=new Date();
+    const dateStr=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const rec={text,mood,xp,date:dateStr,week:weekKey(now)};
+    memories.push(rec);
+    if(memories.length>500) memories=memories.slice(-500);
+    try{localStorage.setItem(SK,JSON.stringify(memories))}catch(e){}
+
+    cntEl.textContent=memories.length;
+    showToast(fd);
+  },550);
+
+  memo.value='';
+  phText.style.opacity='1';
+  sendBtn.classList.remove('show');
+  hint.style.opacity='0';
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────
+let toastT;
+function showToast(fd){
+  const t=document.getElementById('toast');
+  t.textContent=`${fd.emoji} ${fd.name}が咲きました`;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),2300);
+}
+
+// ─── WEEK UTIL ────────────────────────────────────────────────────────────
+function weekKey(d){
+  const day=new Date(d); day.setHours(0,0,0,0);
+  const dow=day.getDay(), diff=day.getDate()-dow+(dow===0?-6:1);
+  day.setDate(diff);
+  return `${day.getFullYear()}-${day.getMonth()+1}-${day.getDate()}`;
+}
+function weekLabel(k){
+  const [y,m,d]=k.split('-').map(Number);
+  const s=new Date(y,m-1,d), e=new Date(s); e.setDate(e.getDate()+6);
+  const tw=weekKey(new Date());
+  return k===tw?'今週':`${s.getMonth()+1}/${s.getDate()}〜${e.getMonth()+1}/${e.getDate()}`;
+}
+
+// ─── RECAP ────────────────────────────────────────────────────────────────
+let selWeek=null, wordTimers=[];
+function openRecap(){
+  document.getElementById('recap-overlay').classList.add('open');
+  buildTabs();
+}
+function closeRecap(){ document.getElementById('recap-overlay').classList.remove('open'); }
+function outsideClose(e){ if(e.target.id==='recap-overlay') closeRecap(); }
+
+function buildTabs(){
+  const weeks=[...new Set(memories.map(m=>m.week||weekKey(new Date(m.date||Date.now()))))].sort((a,b)=>b>a?1:-1);
+  if(!weeks.length) weeks.push(weekKey(new Date()));
+  const container=document.getElementById('r-tabs');
+  container.innerHTML='';
+  weeks.slice(0,6).forEach((w,i)=>{
+    const btn=document.createElement('button');
+    btn.className='wtab'+(i===0?' on':'');
+    btn.textContent=weekLabel(w);
+    btn.onclick=()=>{
+      document.querySelectorAll('.wtab').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on'); selWeek=w; renderRecap(w);
+    };
+    container.appendChild(btn);
+  });
+  selWeek=weeks[0]; renderRecap(weeks[0]);
+}
+
+function renderRecap(wk){
+  const wm=memories.filter(m=>(m.week||weekKey(new Date(m.date||Date.now())))===wk);
+  document.getElementById('r-title').textContent=`${weekLabel(wk)}の花畑`;
+  document.getElementById('r-sub').textContent=wm.length?`${wm.length}個の幸せを貯めました`:'まだ幸せが貯まっていません';
+  drawMiniGarden(wm);
+  floatWords(wm);
+  renderList(wm);
+}
+
+function drawMiniGarden(mems){
+  const canvas=document.getElementById('mini-canvas');
+  const W=canvas.parentElement.clientWidth||300, H=160;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#c8e6c9'; ctx.fillRect(0,H-28,W,28);
+
+  mems.forEach((m,i)=>{
+    const fd=FLOWERS[m.mood]||FLOWERS.moved;
+    const xp=m.xp||(8+(i/Math.max(mems.length-1,1))*84);
+    const x=xp*W/100;
+    const sc=.45+Math.random()*.38;
+    const stemH=(32+Math.random()*22)*sc;
+    const groundY=H-28;
+    const r=(11+Math.random()*7)*sc;
+
+    ctx.save(); ctx.translate(x,groundY);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-stemH);
+    ctx.strokeStyle='#7cbf8a'; ctx.lineWidth=1.3; ctx.stroke();
+    ctx.translate(0,-stemH);
+
+    if(fd.petals===0){
+      for(let j=-2;j<=2;j++){
+        ctx.beginPath(); ctx.ellipse(j*2.5*sc,-5*sc,2*sc,6*sc,0,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${fd.h},${fd.s}%,${fd.l}%)`; ctx.globalAlpha=.82; ctx.fill(); ctx.globalAlpha=1;
+      }
+    } else {
+      for(let j=0;j<fd.petals;j++){
+        const a=(j/fd.petals)*Math.PI*2;
+        const px3=Math.cos(a)*r*.56, py3=Math.sin(a)*r*.56;
+        ctx.save(); ctx.translate(px3,py3); ctx.rotate(a+Math.PI/2);
+        ctx.beginPath(); ctx.ellipse(0,0,r*.42,r*.28,0,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${fd.h},${fd.s}%,${fd.l}%)`; ctx.globalAlpha=.85; ctx.fill(); ctx.globalAlpha=1; ctx.restore();
+      }
+      ctx.beginPath(); ctx.arc(0,0,r*.2,0,Math.PI*2); ctx.fillStyle='#fff8e1'; ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+
+function floatWords(mems){
+  wordTimers.forEach(clearTimeout); wordTimers=[];
+  const layer=document.getElementById('words-layer');
+  layer.innerHTML='';
+  mems.forEach((m,i)=>{
+    const t=setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='fw';
+      el.textContent=m.text.length>16?m.text.slice(0,16)+'…':m.text;
+      el.style.left=(6+Math.random()*74)+'%';
+      el.style.bottom=(15+Math.random()*52)+'%';
+      layer.appendChild(el);
+      setTimeout(()=>el.remove(),3400);
+    },i*380);
+    wordTimers.push(t);
+  });
+}
+
+function renderList(mems){
+  const list=document.getElementById('mlist');
+  if(!mems.length){
+    list.innerHTML='<div style="font-size:12px;color:#7a9b8a;text-align:center;padding:18px 0;font-weight:300;">この週はまだ幸せが貯まっていません</div>';
+    return;
+  }
+  list.innerHTML=[...mems].reverse().map((m,i)=>{
+    const fd=FLOWERS[m.mood]||FLOWERS.moved;
+    return `<div class="mi" style="animation-delay:${i*45}ms">
+      <div class="mi-em">${fd.emoji}</div>
+      <div><div class="mi-tx">${esc(m.text)}</div><div class="mi-dt">${fd.name} · ${m.date||''}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+memories.slice(-60).forEach((m,i)=>{
+  if(!m||!m.mood||!FLOWERS[m.mood]) return;
+  setTimeout(()=>{
+    gardenFlowers.push({
+      mood:m.mood,
+      xp:m.xp||(5+Math.random()*90),
+      scale:.5+Math.random()*.62,
+      r:12+Math.random()*9,
+      stemH:46+Math.random()*50,
+      ss:.55+Math.random()*.85,
+      so:Math.random()*Math.PI*2,
+      born:performance.now()-1600
+    });
+  },i*50);
+});
+
+drawLoop();
+</script>
+</body>
+</html>
