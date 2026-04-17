@@ -108,11 +108,20 @@ app.post('/api/detect-mood', async (req, res) => {
 })
 
 // production: serve built client
+// Express 5 + path-to-regexp v8: `app.get('*')` throws (Missing parameter name for `*`).
+// Use a catch-all middleware instead of a wildcard route pattern.
 if (process.env.NODE_ENV === 'production') {
   const dist = path.resolve(process.cwd(), 'dist')
   if (fs.existsSync(dist)) {
+    const indexHtml = path.join(dist, 'index.html')
     app.use(express.static(dist))
-    app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')))
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next()
+      if (req.path.startsWith('/api')) return next()
+      res.sendFile(indexHtml, (err) => {
+        if (err) next(err)
+      })
+    })
   }
 }
 
