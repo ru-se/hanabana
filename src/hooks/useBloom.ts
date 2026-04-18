@@ -47,7 +47,12 @@ export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: 
     try {
       const res = await detectMood(t)
       mood = res.mood
-    } catch {
+    } catch (error) {
+      // API timeout時は演出を中断して静かに復帰（15秒後の遅延開花を防ぐ）
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        if (activeId.current === myId) setIsBusy(false)
+        return
+      }
       mood = 'moved'
     }
 
@@ -63,21 +68,30 @@ export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: 
     }, waitParticles)
     timersRef.current.push(particlesT)
 
-    const bloomT = window.setTimeout(() => {
-      void (async () => {
-        if (activeId.current !== myId) return
-        try {
-          const xp = 4 + Math.random() * 92
-          const mem = await argsRef.current.addMemory({ text: t, mood, xp })
-          if (activeId.current !== myId) return
-          argsRef.current.onBloom(mem)
-          argsRef.current.onToast(flowerToastText(mood))
-        } finally {
-          if (activeId.current === myId) setIsBusy(false)
-        }
-      })()
-    }, waitBloom)
-    timersRef.current.push(bloomT)
+    await new Promise<void>((resolve) => {
+      const bloomT = window.setTimeout(() => {
+        void (async () => {
+          if (activeId.current !== myId) {
+            resolve()
+            return
+          }
+          try {
+            const xp = 4 + Math.random() * 92
+            const mem = await argsRef.current.addMemory({ text: t, mood, xp })
+            if (activeId.current !== myId) {
+              resolve()
+              return
+            }
+            argsRef.current.onBloom(mem)
+            argsRef.current.onToast(flowerToastText(mood))
+          } finally {
+            if (activeId.current === myId) setIsBusy(false)
+            resolve()
+          }
+        })()
+      }, waitBloom)
+      timersRef.current.push(bloomT)
+    })
   }, [])
 
   return { isBusy, submit }
