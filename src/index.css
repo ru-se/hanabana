@@ -98,6 +98,17 @@ textarea {
   user-select: none;
 }
 
+.todayBadge {
+  position: fixed;
+  bottom: 44px;
+  left: 24px;
+  z-index: 20;
+  font-size: 10px;
+  color: rgba(61, 122, 181, 0.78);
+  letter-spacing: 0.08em;
+  user-select: none;
+}
+
 .recapBtn {
   position: fixed;
   bottom: 20px;
@@ -182,6 +193,9 @@ textarea {
   text-align: center;
   pointer-events: none;
   position: absolute;
+  left: 24px;
+  right: 24px;
+  top: calc(50% - 54px);
   transition: opacity 0.25s;
   user-select: none;
 }
@@ -197,6 +211,7 @@ textarea {
   font-weight: 300;
   color: var(--ui-ink);
   line-height: 1.9;
+  padding-top: 8px;
   resize: none;
   text-align: center;
   caret-color: rgba(107, 168, 212, 0.8);
@@ -232,9 +247,9 @@ textarea {
 }
 
 .analyzeLine {
-  margin-top: 10px;
+  margin-top: 8px;
   font-size: 11px;
-  color: rgba(107, 168, 212, 0.75);
+  color: rgba(107, 168, 212, 0.6);
   letter-spacing: 0.12em;
   text-align: center;
   opacity: 0;
@@ -248,28 +263,6 @@ textarea {
 .analyzeLineOn {
   opacity: 1;
   max-height: 24px;
-}
-
-.writeFeedback {
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 300;
-  color: rgba(44, 62, 53, 0.72);
-  letter-spacing: 0.06em;
-  text-align: center;
-  line-height: 1.65;
-  max-width: 420px;
-  animation: feedbackFade 0.5s ease-out;
-}
-@keyframes feedbackFade {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .sendBtnWrap {

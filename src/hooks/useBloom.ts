@@ -11,7 +11,6 @@ export type UseBloomArgs = {
   onParticles: (x: number, y: number, mood: Mood) => void
   onBloom: (m: Memory) => void
   onToast: (msg: string) => void
-  onFeedbackLine?: (mood: Mood) => void
 }
 
 export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: string) => Promise<void> } {
@@ -35,11 +34,14 @@ export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: 
     const myId = ++activeId.current
     clearTimers()
     setIsBusy(true)
+    const startedAt = performance.now()
 
     const cx = window.innerWidth / 2
     const cy = window.innerHeight / 2 + 10
 
     argsRef.current.onWaterDrop?.()
+    argsRef.current.onFlash()
+    argsRef.current.onRipple(cx, cy)
 
     let mood: Mood = 'moved'
     try {
@@ -51,14 +53,14 @@ export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: 
 
     if (activeId.current !== myId) return
 
-    argsRef.current.onFeedbackLine?.(mood)
-    argsRef.current.onFlash()
-    argsRef.current.onRipple(cx, cy)
+    const elapsed = performance.now() - startedAt
+    const waitParticles = Math.max(0, 550 - elapsed)
+    const waitBloom = Math.max(0, 800 - elapsed)
 
     const particlesT = window.setTimeout(() => {
       if (activeId.current !== myId) return
       argsRef.current.onParticles(cx, cy, mood)
-    }, 550)
+    }, waitParticles)
     timersRef.current.push(particlesT)
 
     const bloomT = window.setTimeout(() => {
@@ -74,7 +76,7 @@ export function useBloom(args: UseBloomArgs): { isBusy: boolean; submit: (text: 
           if (activeId.current === myId) setIsBusy(false)
         }
       })()
-    }, 800)
+    }, waitBloom)
     timersRef.current.push(bloomT)
   }, [])
 

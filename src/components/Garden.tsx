@@ -140,7 +140,10 @@ function renderFlower(
   ctx.beginPath()
   ctx.moveTo(0, 0)
   ctx.lineTo(0, -stemH)
-  ctx.strokeStyle = '#7cbf8a'
+  const stemGrad = ctx.createLinearGradient(0, 0, 0, -stemH)
+  stemGrad.addColorStop(0, 'rgba(111,181,123,0.95)')
+  stemGrad.addColorStop(1, 'rgba(89,146,102,0.95)')
+  ctx.strokeStyle = stemGrad
   ctx.lineWidth = 1.6 * sc
   ctx.stroke()
 
@@ -194,11 +197,21 @@ function renderFlower(
       ctx.beginPath()
       ctx.ellipse(0, 0, r * 0.42, r * 0.28, 0, 0, Math.PI * 2)
       const j = (rand(f.id, `p${i}`) - 0.5) * 12
-      ctx.fillStyle = petalColor(j)
+      const petalGrad = ctx.createRadialGradient(0, 0, r * 0.06, 0, 0, r * 0.48)
+      petalGrad.addColorStop(0, `hsla(${def.hue + j},${Math.min(100, def.sat + 5)}%,${Math.min(96, def.light + 16)}%,0.95)`)
+      petalGrad.addColorStop(1, `hsla(${def.hue + j},${def.sat}%,${Math.max(22, def.light - 8)}%,0.92)`)
+      ctx.fillStyle = petalGrad
       ctx.globalAlpha = depthOpacity * 0.87
       ctx.fill()
       ctx.restore()
     }
+    ctx.beginPath()
+    ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2)
+    const centerGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.32)
+    centerGrad.addColorStop(0, 'rgba(255,245,205,0.95)')
+    centerGrad.addColorStop(1, 'rgba(246,212,145,0.85)')
+    ctx.fillStyle = centerGrad
+    ctx.fill()
     ctx.beginPath()
     ctx.arc(0, 0, r * 0.21, 0, Math.PI * 2)
     ctx.fillStyle = '#fff8e1'

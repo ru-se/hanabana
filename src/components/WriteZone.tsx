@@ -4,7 +4,6 @@ import { WaterDrop } from './WaterDrop'
 export function WriteZone(props: {
   disabled?: boolean
   busy?: boolean
-  feedbackLine?: string | null
   onSubmit: (text: string) => Promise<void>
 }) {
   const [text, setText] = useState('')
@@ -49,13 +48,8 @@ export function WriteZone(props: {
       <div className="underline" />
       <div className={`hint ${canSend ? 'hintOn' : ''}`}>⌘ Enter でも送れます</div>
       <div className={`analyzeLine ${busy ? 'analyzeLineOn' : ''}`} aria-live="polite">
-        気持ちを読み取り中…
+        花が咲く準備中…
       </div>
-      {props.feedbackLine ? (
-        <div className="writeFeedback" aria-live="polite">
-          {props.feedbackLine}
-        </div>
-      ) : null}
       <button
         className={`sendBtnWrap ${canSend ? 'sendBtnShow' : ''}`}
         onClick={() => void submit()}

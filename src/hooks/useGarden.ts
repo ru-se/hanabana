@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { isSameLocalDay } from '../lib/time'
 import type { GardenFlower, Memory } from '../types'
 
 function hashToUnit(v: string): number {
@@ -13,7 +12,6 @@ function hashToUnit(v: string): number {
 
 export function useGarden(
   memories: Memory[],
-  todayKey: string,
 ): {
   flowers: GardenFlower[]
   isFlashOn: boolean
@@ -42,17 +40,16 @@ export function useGarden(
         ySeed: hashToUnit(m.id),
         bornAtMs: now,
         createdAtISO: m.created_at,
-        isToday: isSameLocalDay(m.created_at, todayKey),
       }
       knownIds.current.add(m.id)
-      setFlowers((prev) => [...prev, f].slice(-140))
+      setFlowers((prev) => [...prev, f].slice(-500))
     },
-    [todayKey],
+    [],
   )
 
   useEffect(() => {
     const now = performance.now()
-    const incoming = memories.slice(-120)
+    const incoming = memories
     const missing = incoming.filter((m) => !knownIds.current.has(m.id))
     if (!missing.length) return
 
@@ -67,12 +64,11 @@ export function useGarden(
           ySeed: hashToUnit(m.id),
           bornAtMs: now - 1600,
           createdAtISO: m.created_at,
-          isToday: isSameLocalDay(m.created_at, todayKey),
         })
       }
-      return next.slice(-140)
+      return next.slice(-500)
     })
-  }, [memories, todayKey])
+  }, [memories])
 
   useEffect(() => {
     return () => {

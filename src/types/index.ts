@@ -33,5 +33,4 @@ export type GardenFlower = {
   ySeed: number // 0..1 depth-ish seed (deterministic)
   bornAtMs: number
   createdAtISO: string
-  isToday: boolean
 }
