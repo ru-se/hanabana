@@ -56,7 +56,9 @@ export default function App() {
       <div className="counter">
         🌸 <span>{memories.length}</span>
       </div>
-      <div className="todayBadge">今日の花 {todayCount} 本（光る花）</div>
+      <div className="todayBadge">
+        {todayCount > 0 ? `今日の花 ${todayCount} 本（光る花）` : '今日はまだ咲いていません（中央の芽）'}
+      </div>
       <button className="recapBtn" onClick={() => setRecapOpen(true)}>
         振り返る ✦
       </button>

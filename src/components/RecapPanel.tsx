@@ -57,6 +57,33 @@ export function RecapPanel(props: {
     return props.memories.filter((m) => m.week_key === wk).sort((a, b) => (a.created_at > b.created_at ? 1 : -1))
   }, [props.memories, wk])
 
+  const moodSummary = useMemo(() => {
+    if (!weekMemories.length) return null
+    const counts = weekMemories.reduce<Record<string, number>>((acc, m) => {
+      acc[m.mood] = (acc[m.mood] || 0) + 1
+      return acc
+    }, {})
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]
+    if (!top) return null
+    const mood = top[0] as Memory['mood']
+    const count = top[1]
+    const flower = FLOWERS[mood] ?? FLOWERS.moved
+    const commentByMood: Record<Memory['mood'], string> = {
+      happy: '軽やかな瞬間が多い週でした。',
+      love: 'やさしさを感じる時間が多い週でした。',
+      moved: '心がじんわり動く場面が多い週でした。',
+      calm: '穏やかな呼吸で過ごせた週でした。',
+      tired: '頑張りを積み重ねた週でした。',
+      fun: 'わくわくした気持ちが多い週でした。',
+    }
+    return {
+      flowerName: flower.name,
+      emoji: flower.emoji,
+      count,
+      comment: commentByMood[mood],
+    }
+  }, [weekMemories])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -170,6 +197,14 @@ export function RecapPanel(props: {
           </button>
         </div>
         <div className="rsub">{sub}</div>
+        {moodSummary ? (
+          <div className="moodSummary">
+            <div className="moodSummaryTitle">
+              {moodSummary.emoji} 今週いちばん多かった花は「{moodSummary.flowerName}」({moodSummary.count}本)
+            </div>
+            <div className="moodSummaryText">{moodSummary.comment}</div>
+          </div>
+        ) : null}
 
         <div className="wtabs">
           {props.weeks.slice(0, 6).map((w) => (

@@ -83,9 +83,13 @@ export function Garden(props: { flowers: GardenFlower[]; todayKey: string }) {
         ctx.restore()
       }
 
-      const ordered = [...list].sort((a, b) => a.ySeed - b.ySeed)
+      const ordered = getRenderFlowers(list, tk).sort((a, b) => a.ySeed - b.ySeed)
       for (const f of ordered) {
         renderFlower(ctx, f, now, W, groundY, horizonY, tk)
+      }
+
+      if (!todayList.length) {
+        renderTodayBud(ctx, now, W, groundY)
       }
 
       raf = window.requestAnimationFrame(loop)
@@ -99,6 +103,64 @@ export function Garden(props: { flowers: GardenFlower[]; todayKey: string }) {
   }, [dpr])
 
   return <canvas ref={canvasRef} className="c-garden" />
+}
+
+function getRenderFlowers(list: GardenFlower[], todayKey: string): GardenFlower[] {
+  // 500本溜まっても重くなりすぎないよう、描画だけ上限を設ける。
+  // 感情的に重要な「今日の花」と「最近の花」は優先する。
+  const HARD_LIMIT = 320
+  if (list.length <= HARD_LIMIT) return [...list]
+
+  const today = list.filter((f) => isSameLocalDay(f.createdAtISO, todayKey))
+  const todaySet = new Set(today.map((f) => f.id))
+  const rest = list.filter((f) => !todaySet.has(f.id))
+
+  const recentCount = Math.min(220, rest.length)
+  const recent = rest.slice(-recentCount)
+  const recentSet = new Set(recent.map((f) => f.id))
+  const older = rest.filter((f) => !recentSet.has(f.id))
+
+  const keep = [...today, ...recent]
+  const remain = Math.max(0, HARD_LIMIT - keep.length)
+  if (!remain || !older.length) return keep
+
+  // 古い花は等間隔サンプリングして「畑が続く感じ」は残す
+  const sampled: GardenFlower[] = []
+  const step = older.length / remain
+  for (let i = 0; i < remain; i++) {
+    const idx = Math.min(older.length - 1, Math.floor(i * step))
+    sampled.push(older[idx])
+  }
+  return [...keep, ...sampled]
+}
+
+function renderTodayBud(ctx: CanvasRenderingContext2D, nowMs: number, W: number, groundY: number) {
+  const x = W * 0.5
+  const y = groundY
+  const t = (nowMs % 2800) / 2800
+  const pulse = 0.45 + 0.55 * (0.5 - 0.5 * Math.cos(Math.PI * 2 * t))
+
+  ctx.save()
+  const glow = ctx.createRadialGradient(x, y - 16, 0, x, y - 16, 22)
+  glow.addColorStop(0, `rgba(255,255,255,${0.28 * pulse})`)
+  glow.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(x, y - 16, 22, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.lineTo(x, y - 18)
+  ctx.strokeStyle = 'rgba(114, 177, 124, 0.95)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.ellipse(x, y - 19, 5.5, 8, 0, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(170, 224, 184, 0.95)'
+  ctx.fill()
+  ctx.restore()
 }
 
 function renderFlower(
