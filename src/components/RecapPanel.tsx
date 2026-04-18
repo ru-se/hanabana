@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FLOWERS } from '../lib/flowerGen'
+import {
+  copyTextToClipboard,
+  downloadBlob,
+  generateShareCard,
+} from '../lib/shareCard'
 import { formatDateTimeShort, isSameLocalDay, weekLabel } from '../lib/time'
 import type { Memory } from '../types'
 
@@ -41,6 +46,9 @@ export function RecapPanel(props: {
   const [selWeek, setSelWeek] = useState<string>(() => props.weeks[0] ?? '')
   const [words, setWords] = useState<WordFloat[]>([])
   const [countUp, setCountUp] = useState<number>(0)
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareHint, setShareHint] = useState<string | null>(null)
+  const cardBlobRef = useRef<Blob | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -136,6 +144,7 @@ export function RecapPanel(props: {
     timersRef.current.forEach((t) => window.clearTimeout(t))
     timersRef.current = []
     miniFlowersRef.current = []
+    cardBlobRef.current = null
 
     const total = weekMemories.length
     if (!total) return
@@ -180,6 +189,52 @@ export function RecapPanel(props: {
   const title = wk ? `${weekLabel(wk)}の花畑` : '今週の花畑'
   const total = weekMemories.length
   const sub = total ? `${countUp || total}個の幸せを貯めました` : 'まだ幸せが貯まっていません'
+  const wkLabel = wk ? weekLabel(wk) : '今週'
+  const shareCaption = `${wkLabel}の花畑を作りました 🌸 #はなびん`
+
+  async function ensureCardBlob(): Promise<Blob> {
+    if (cardBlobRef.current) return cardBlobRef.current
+    if ('fonts' in document && document.fonts?.ready) {
+      await document.fonts.ready
+    }
+    const summaryText = moodSummary
+      ? `${moodSummary.emoji} ${moodSummary.flowerName}が${moodSummary.count}本、いちばん多い週でした`
+      : ''
+    const blob = await generateShareCard(weekMemories, wkLabel, summaryText)
+    cardBlobRef.current = blob
+    return blob
+  }
+
+  async function handleSaveImage() {
+    if (isSharing) return
+    setIsSharing(true)
+    setShareHint(null)
+    try {
+      const blob = await ensureCardBlob()
+      downloadBlob(blob, 'hanabin-week.png')
+      setShareHint('画像を保存しました。')
+      window.setTimeout(() => setShareHint(null), 4000)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  async function handleCopyCaption() {
+    if (isSharing) return
+    setIsSharing(true)
+    setShareHint(null)
+    try {
+      const copied = await copyTextToClipboard(shareCaption)
+      setShareHint(copied ? '投稿文をコピーしました。' : 'コピーに失敗しました。手動でコピーしてください。')
+      window.setTimeout(() => setShareHint(null), 4000)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsSharing(false)
+    }
+  }
 
   return (
     <div
@@ -203,6 +258,22 @@ export function RecapPanel(props: {
               {moodSummary.emoji} 今週いちばん多かった花は「{moodSummary.flowerName}」({moodSummary.count}本)
             </div>
             <div className="moodSummaryText">{moodSummary.comment}</div>
+            <button
+              className="shareBtn"
+              onClick={() => void handleSaveImage()}
+              disabled={isSharing}
+            >
+              {isSharing ? '生成中…' : '画像を保存 🌸'}
+            </button>
+            {shareHint ? <div className="shareHint">{shareHint}</div> : null}
+            <p className="quickShareNote">
+              デプロイ前のため、ここではローカル保存のみ対応しています。
+            </p>
+            <div className="quickShareRow">
+              <button className="quickShareBtn" onClick={() => void handleCopyCaption()} disabled={isSharing}>
+                投稿文をコピー
+              </button>
+            </div>
           </div>
         ) : null}
 
